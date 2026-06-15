@@ -55,6 +55,12 @@ type SpanManager struct {
 	layerSha                          digest.Digest
 	maxSpanVerificationFailureRetries int
 	closeOnce                         sync.Once
+	accessLogger                      AccessLogger
+}
+
+// AccessLogger records span accesses that result in on-demand fetches.
+type AccessLogger interface {
+	LogAccess(layerSha digest.Digest, spanID compression.SpanID)
 }
 
 type spanInfo struct {
@@ -123,6 +129,11 @@ func New(ztoc *ztoc.Ztoc, r *io.SectionReader, cache cache.BlobCache, retries in
 	})
 
 	return m, nil
+}
+
+// SetAccessLogger sets an optional logger that records on-demand span fetches.
+func (m *SpanManager) SetAccessLogger(l AccessLogger) {
+	m.accessLogger = l
 }
 
 func (m *SpanManager) buildAllSpans() error {
@@ -292,6 +303,10 @@ func (m *SpanManager) getSpanInfo(offsetStart, offsetEnd compression.Offset) *sp
 func (m *SpanManager) getSpanContent(spanID compression.SpanID, offsetStart, offsetEnd compression.Offset) (io.ReadCloser, error) {
 	s := m.spans[spanID]
 	size := offsetEnd - offsetStart
+
+	if m.accessLogger != nil {
+		m.accessLogger.LogAccess(m.layerSha, spanID)
+	}
 
 	// return from cache directly if cached and uncompressed
 	if s.checkState(uncompressed) {
