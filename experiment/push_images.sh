@@ -26,21 +26,24 @@ process_image() {
   local TARGET="$ECR_REPO:$TAG"
 
   echo "[$TAG] Pulling $SOURCE..."
-  finch pull "$SOURCE"
+  finch pull --platform linux/amd64 "$SOURCE"
 
   echo "[$TAG] Tagging -> $TARGET"
   finch tag "$SOURCE" "$TARGET"
 
-  # Push image + generate and push SOCI index in one step
-  echo "[$TAG] Pushing image + SOCI index..."
-  finch push --snapshotter soci "$TARGET"
+  # Push image only (SOCI index will be generated on the Linux test host)
+  echo "[$TAG] Pushing image to ECR..."
+  finch push "$TARGET"
 
   echo "[$TAG] Done."
 }
 
-echo "=== Pushing images + SOCI indices to ECR ==="
+echo "=== Pushing images to ECR ==="
 for entry in "${IMAGES[@]}"; do
   process_image "$entry" &
 done
 wait
-echo "=== All images and SOCI indices pushed ==="
+echo "=== All images pushed ==="
+echo ""
+echo "Next: On the Linux test host, generate SOCI indices:"
+echo "  for each image: sudo ctr image pull, sudo soci create, sudo soci push"
