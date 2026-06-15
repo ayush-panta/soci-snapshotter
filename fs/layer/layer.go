@@ -48,11 +48,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/awslabs/soci-snapshotter/cache"
 	"github.com/awslabs/soci-snapshotter/config"
+	"github.com/awslabs/soci-snapshotter/experiment"
 
 	backgroundfetcher "github.com/awslabs/soci-snapshotter/fs/backgroundfetcher"
 	commonmetrics "github.com/awslabs/soci-snapshotter/fs/metrics/common"
@@ -352,9 +354,30 @@ func (r *Resolver) Resolve(ctx context.Context, hosts []docker.RegistryHost, ref
 	if err != nil {
 		return nil, fmt.Errorf("error creating span manager: %w", err)
 	}
+
+	// Experiment: attach access logger if SOCI_ACCESS_LOG is set
+	if logPath := os.Getenv("SOCI_ACCESS_LOG"); logPath != "" {
+		logger, err := experiment.NewFileAccessLogger(logPath)
+		if err != nil {
+			log.G(ctx).WithError(err).Warn("Failed to create access logger, continuing without it")
+		} else {
+			spanManager.SetAccessLogger(logger)
+		}
+	}
+
 	var bgLayerResolver backgroundfetcher.Resolver
 	if r.bgFetcher != nil {
-		bgLayerResolver = backgroundfetcher.NewSequentialResolver(desc.Digest, spanManager)
+		// Experiment: use oracle resolver if SOCI_ORACLE_LOG is set
+		if oraclePath := os.Getenv("SOCI_ORACLE_LOG"); oraclePath != "" {
+			order, err := experiment.LoadAccessOrder(oraclePath, desc.Digest)
+			if err == nil && len(order) > 0 {
+				bgLayerResolver = experiment.NewOracleResolver(desc.Digest, spanManager, order, ztoc.MaxSpanID)
+			} else {
+				bgLayerResolver = backgroundfetcher.NewSequentialResolver(desc.Digest, spanManager)
+			}
+		} else {
+			bgLayerResolver = backgroundfetcher.NewSequentialResolver(desc.Digest, spanManager)
+		}
 		r.bgFetcher.Add(bgLayerResolver)
 	}
 
