@@ -14,12 +14,12 @@ set -euo pipefail
 #   - metrics_address = "localhost:1338" in config
 ###############################################################################
 
-ECR_REPO="299170649678.dkr.ecr.us-west-2.amazonaws.com/lod-testing"
+ECR_REPO="299170649678.dkr.ecr.us-west-2.amazonaws.com/lod"
 REGION="us-west-2"
-SNAPSHOTTER_BIN="/home/ssm-user/soci-snapshotter/out/soci-snapshotter-grpc"
+SNAPSHOTTER_BIN="/root/soci-snapshotter/out/soci-snapshotter-grpc"
 CONFIG="/etc/soci-snapshotter-grpc/config.toml"
 ACCESS_LOG="/tmp/soci_access.log"
-RESULTS="/home/ssm-user/soci-snapshotter/experiment/results.csv"
+RESULTS="/root/soci-snapshotter/experiment/results.csv"
 METRICS_ADDR="localhost:1338"
 TRIALS=10
 
@@ -33,7 +33,7 @@ IMAGES=(
   "golang-1.23|go version"
   "cuda-12.4.0-runtime|cat /usr/local/cuda/version.json"
   "rust-1.79|rustc --version"
-  "pytorch-2.4.0|python -c 'import torch; print(torch.__version__)'"
+  "tensorflow-2.16.1|python -c 'import tensorflow; print(tensorflow.__version__)'"
 )
 
 ###############################################################################
