@@ -70,24 +70,28 @@ start_snapshotter() {
 }
 
 clear_cache() {
-  # Soci snapshotter cache
+  # Remove image reference
+  ctr image rm "$1" 2>/dev/null || true
+
+  # Stop containerd to release all state
+  systemctl stop containerd 2>/dev/null || true
+
+  # Nuke all containerd state
+  rm -rf /var/lib/containerd/io.containerd.snapshotter.v1.soci/* 2>/dev/null || true
+  rm -rf /var/lib/containerd/io.containerd.content.v1.content/blobs/* 2>/dev/null || true
+  rm -rf /var/lib/containerd/io.containerd.content.v1.content/ingest/* 2>/dev/null || true
+  rm -rf /var/lib/containerd/io.containerd.metadata.v1.bolt/meta.db 2>/dev/null || true
+
+  # Nuke soci snapshotter state
   rm -rf /var/lib/soci-snapshotter-grpc/content/* 2>/dev/null || true
   rm -rf /var/lib/soci-snapshotter-grpc/snapshotter/* 2>/dev/null || true
 
-  # Containerd snapshotter state
-  rm -rf /var/lib/containerd/io.containerd.snapshotter.v1.soci/* 2>/dev/null || true
-
-  # Containerd content store (cached blobs/manifests) - preserve dir structure
-  rm -rf /var/lib/containerd/io.containerd.content.v1.content/blobs/* 2>/dev/null || true
-  rm -rf /var/lib/containerd/io.containerd.content.v1.content/ingest/* 2>/dev/null || true
-
   # Kernel page cache
   sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
-}
 
-remove_image() {
-  local image="$1"
-  ctr image rm "$image" 2>/dev/null || true
+  # Restart containerd fresh
+  systemctl start containerd
+  sleep 1
 }
 
 get_stall_count() {
@@ -107,8 +111,7 @@ run_trial() {
 
   # Clean slate
   stop_snapshotter
-  clear_cache
-  remove_image "$image"
+  clear_cache "$image"
 
   # Start snapshotter in desired mode
   start_snapshotter "$mode"
