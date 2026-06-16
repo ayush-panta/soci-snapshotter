@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -uo pipefail
 
 ###############################################################################
 # LOD Oracle Experiment Runner
@@ -119,7 +119,7 @@ run_trial() {
   # Pull and run
   local time_start=$(date +%s%N)
 
-  ctr image pull --user "AWS:$ECR_TOKEN" --snapshotter soci "$image" > /dev/null 2>&1
+  ctr image pull --user "AWS:$ECR_TOKEN" --snapshotter soci "$image" > /dev/null 2>&1 || log "    WARN: pull failed for $image"
 
   # Run startup command with 30s timeout
   timeout 30 ctr run --rm --snapshotter soci "$image" "test-$tag-$trial" \
