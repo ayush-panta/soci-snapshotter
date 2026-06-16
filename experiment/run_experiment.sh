@@ -71,14 +71,15 @@ start_snapshotter() {
 
 clear_cache() {
   # Soci snapshotter cache
-  rm -rf /var/lib/soci-snapshotter-grpc/ 2>/dev/null || true
-  mkdir -p /var/lib/soci-snapshotter-grpc
+  rm -rf /var/lib/soci-snapshotter-grpc/content/* 2>/dev/null || true
+  rm -rf /var/lib/soci-snapshotter-grpc/snapshotter/* 2>/dev/null || true
 
   # Containerd snapshotter state
-  rm -rf /var/lib/containerd/io.containerd.snapshotter.v1.soci/ 2>/dev/null || true
+  rm -rf /var/lib/containerd/io.containerd.snapshotter.v1.soci/* 2>/dev/null || true
 
-  # Containerd content store (cached blobs/manifests)
-  rm -rf /var/lib/containerd/io.containerd.content.v1.content/ 2>/dev/null || true
+  # Containerd content store (cached blobs/manifests) - preserve dir structure
+  rm -rf /var/lib/containerd/io.containerd.content.v1.content/blobs/* 2>/dev/null || true
+  rm -rf /var/lib/containerd/io.containerd.content.v1.content/ingest/* 2>/dev/null || true
 
   # Kernel page cache
   sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
@@ -115,7 +116,7 @@ run_trial() {
   # Pull and run
   local time_start=$(date +%s%N)
 
-  ctr image rpull --user "AWS:$ECR_TOKEN" --snapshotter soci "$image" > /dev/null 2>&1
+  ctr image pull --user "AWS:$ECR_TOKEN" --snapshotter soci "$image" > /dev/null 2>&1
 
   # Run startup command with 30s timeout
   timeout 30 ctr run --rm --snapshotter soci "$image" "test-$tag-$trial" \
