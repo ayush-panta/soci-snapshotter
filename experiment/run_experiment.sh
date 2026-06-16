@@ -70,28 +70,15 @@ start_snapshotter() {
 }
 
 clear_cache() {
-  # Remove image reference
+  # Remove image and prune orphaned content
   ctr image rm "$1" 2>/dev/null || true
+  ctr content prune references 2>/dev/null || true
 
-  # Stop containerd to release all state
-  systemctl stop containerd 2>/dev/null || true
-
-  # Nuke all containerd state
-  rm -rf /var/lib/containerd/io.containerd.snapshotter.v1.soci/* 2>/dev/null || true
-  rm -rf /var/lib/containerd/io.containerd.content.v1.content/blobs/* 2>/dev/null || true
-  rm -rf /var/lib/containerd/io.containerd.content.v1.content/ingest/* 2>/dev/null || true
-  rm -rf /var/lib/containerd/io.containerd.metadata.v1.bolt/meta.db 2>/dev/null || true
-
-  # Nuke soci snapshotter state
+  # Wipe soci snapshotter's span cache
   rm -rf /var/lib/soci-snapshotter-grpc/content/* 2>/dev/null || true
-  rm -rf /var/lib/soci-snapshotter-grpc/snapshotter/* 2>/dev/null || true
 
-  # Kernel page cache
+  # Drop kernel page cache
   sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
-
-  # Restart containerd fresh
-  systemctl start containerd
-  sleep 1
 }
 
 get_stall_count() {
