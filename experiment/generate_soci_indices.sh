@@ -30,10 +30,10 @@ for TAG in "${TAGS[@]}"; do
   ctr image pull --user "AWS:$ECR_TOKEN" --platform linux/amd64 "$IMAGE"
 
   echo "  Creating SOCI index..."
-  $SOCI_BIN create "$IMAGE"
+  $SOCI_BIN create --platform linux/amd64 "$IMAGE"
 
   echo "  Pushing SOCI index..."
-  $SOCI_BIN push --user "AWS:$ECR_TOKEN" "$IMAGE"
+  $SOCI_BIN push --user "AWS:$ECR_TOKEN" --platform linux/amd64 "$IMAGE"
 
   echo "  Done."
   echo ""
